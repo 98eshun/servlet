@@ -1,5 +1,6 @@
 package hello.servlet.web.frontcontroller.v3;
 
+import hello.servlet.web.frontcontroller.ModelView;
 import hello.servlet.web.frontcontroller.MyView;
 import hello.servlet.web.frontcontroller.v3.controller.MemberFormControllerV3;
 import hello.servlet.web.frontcontroller.v3.controller.MemberListControllerV3;
@@ -14,34 +15,43 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-@WebServlet(name = "frontControllerServletV3", urlPatterns = "/front-controller/v3/*") // v3다음에 어떤 url이 들어와도 호출함
+@WebServlet(name = "frontControllerServletV3", urlPatterns = "/front-controller/v3/*")
 public class FrontControllerServletV3 extends HttpServlet {
-
     private Map<String, ControllerV3> controllerMap = new HashMap<>();
-
-    // map의 키가 호출 되면 오른쪽의 value가 실행되는 그런
     public FrontControllerServletV3() {
-        controllerMap.put("/front-controller/v3/members/new-form", new MemberFormControllerV3());
-        controllerMap.put("/front-controller/v3/members/save", new MemberSaveControllerV3());
-        controllerMap.put("/front-controller/v3/members", new MemberListControllerV3());
+        controllerMap.put("/front-controller/v3/members/new-form", new
+                MemberFormControllerV3());
+        controllerMap.put("/front-controller/v3/members/save", new
+                MemberSaveControllerV3());
+        controllerMap.put("/front-controller/v3/members", new
+                MemberListControllerV3());
     }
-
     @Override
-    protected void service(HttpServletRequest requset, HttpServletResponse response) throws ServletException, IOException {
-        System.out.println("FrontControllerServletV3.service");
-
-        // getRequestURI() = uri의 정보를 가져옴
-        String requestURI = requset.getRequestURI();
-
+    protected void service(HttpServletRequest request, HttpServletResponse
+            response)
+            throws ServletException, IOException {
+        String requestURI = request.getRequestURI();
         ControllerV3 controller = controllerMap.get(requestURI);
         if (controller == null) {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             return;
         }
-        //paramMap을 넘겨주어야 함
-        requset.getParameterNames().asIterator()
-                .forEachRemaining(paramName -> paramMap.put(paramName, request.get));
-        MyView view = controller.process(requset, response);
-        view.render(requset, response);
+        Map<String, String> paramMap = createParamMap(request);
+        ModelView mv = controller.process(paramMap);
+        String viewName = mv.getViewName(); // 논리 이름만 받음 new-form
+
+        MyView view = viewResolver(viewName);
+        view.render(mv.getModel(), request, response);
+    }
+    private Map<String, String> createParamMap(HttpServletRequest request) {
+        Map<String, String> paramMap = new HashMap<>();
+        request.getParameterNames().asIterator()
+                .forEachRemaining(paramName -> paramMap.put(paramName,
+                        request.getParameter(paramName)));
+        return paramMap;
+    }
+    private MyView viewResolver(String viewName) {
+        return new MyView("/WEB-INF/views/" + viewName + ".jsp");   // 논리 뷰 이름을 실제 물리 뷰 경로로 변환
+
     }
 }
